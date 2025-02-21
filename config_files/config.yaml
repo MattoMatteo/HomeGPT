@@ -1,0 +1,35 @@
+#Input mic device
+        #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
+        #2. "default" to automaticaly select a default mic input
+        #3. The name of mic. If the mic will not found, the default will be used.
+                #If no one device will be find, check the log for the names list of devices available
+mic_name: None    
+
+recognition_language: "it-it" #It uses Google APIs. For simplicity I have added a code list for the various languages in SrLanguages.ywaml: RecognitionLanguageCode.
+
+activation_words: # a list of words that trigger speech recognition
+  - "hey google"
+  - "alexa"   
+
+#output internal device
+        #Device Name:
+        #1. Set to null if you dont wanna use internal audio output device but just another device that comunicate with MQTT
+        #2. "default" to automaticaly select a default audio output device
+        #3. The name of audio output device. If the audio output device will not found, the default will be used.
+                #If no one device will be find, check the log for the names list of devices available
+out_device_name: null
+
+        #Language code:
+        #1. It uses gtts (Google text to speech), so you can search your language code.
+        #2. If an invalid code will be insert, "en" will be set by default. For simplicity I have added a code list for the various languages in SrLanguages.yaml: OutLanguageCode.
+out_language: "it"
+
+mqtt:    
+  mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
+  mqtt_username: ""
+  matt_password: ""
+  mqtt_port: 1883
+  mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
+  mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
+
+

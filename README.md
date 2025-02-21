@@ -17,30 +17,45 @@ The response is then played via internal speakers or sent via MQTT for smart hom
 Using Selenium to query and extract data slows down the overall process (compared to using the APIs directly, which are paid for based on the number of tokens). This, combined with a small delay in transmitting and receiving MQTT signals, results in an average wait time of about 10 seconds, with rare cases reaching up to 15 seconds.
 
 ## ⚙️ Configuration
-Modify the `config.py` file to set up your preferences:
+Modify the `config.yaml` file to set up your preferences:
 
-```python
-# Input mic device
-mic_name = None    # Set to "default" for auto-selection or specify device name
-recognition_language = recognitionLanguageCode.ITALIAN_ITALY 
-activation_words = ("hey google", "alexa")  # Trigger words for speech recognition
+```yaml
+#Input mic device
+        #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
+        #2. "default" to automaticaly select a default mic input
+        #3. The name of mic. If the mic will not found, the default will be used.
+                #If no one device will be find, check the log for the names list of devices available
+mic_name: None    
 
-# Output audio device
-out_device_name = None  # Set to "default" for auto-selection or specify device name
-out_language = outLanguageCode.ITALIAN  # Language for TTS output
+recognition_language: "it-it" #It uses Google APIs. For simplicity I have added a code list for the various languages in SrLanguages.ywaml: RecognitionLanguageCode.
 
-# MQTT Configuration
-mqtt_host = ""  # Example: "192.168.1.1"
-mqtt_username = ""
-mqtt_password = ""
-mqtt_port = 1883  # Default MQTT port
+activation_words: # a list of words that trigger speech recognition
+  - "hey google"
+  - "alexa"   
 
-# MQTT Topics
-mqtt_topic_subscription = "HomeGPT/listen"  # Topic for receiving input
-mqtt_topic_publication = "HomeGPT/respond"  # Topic for sending output
+#output internal device
+        #Device Name:
+        #1. Set to null if you dont wanna use internal audio output device but just another device that comunicate with MQTT
+        #2. "default" to automaticaly select a default audio output device
+        #3. The name of audio output device. If the audio output device will not found, the default will be used.
+                #If no one device will be find, check the log for the names list of devices available
+out_device_name: null
+
+        #Language code:
+        #1. It uses gtts (Google text to speech), so you can search your language code.
+        #2. If an invalid code will be insert, "en" will be set by default. For simplicity I have added a code list for the various languages in SrLanguages.yaml: OutLanguageCode.
+out_language: "it"
+
+mqtt:    
+  mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
+  mqtt_username: ""
+  matt_password: ""
+  mqtt_port: 1883
+  mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
+  mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
 ```
 
-For language codes, refer to the `SrLanguages.py` file which contains enums for different languages.
+For language codes, refer to the `SrLanguages.yaml` file which contains list of different languages.
 
 ## 🤖 Future Improvements
 - Use a chatgpt.com account and other LLMs and their APIs for those who wish.

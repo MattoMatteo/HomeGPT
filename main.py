@@ -23,16 +23,14 @@ from selenium.webdriver.common.by import By
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import MQTTErrorCode
 
-#configuration user
-import config
-
+import yaml
 #----------- MQQT --------------
 
 mqtt_client = mqtt.Client()
 mqtt_mode = False
 
 def on_connect(client, userdata, flags, rc):
-    client.subscribe(config.mqtt_topic_subscription)
+    client.subscribe(config["mqtt"]["mqtt_topic_subscription"])
 
 def on_message(client, userdata, msg):
     global use_internal_audio_output
@@ -47,16 +45,16 @@ def on_message(client, userdata, msg):
         start_text_to_speech(response)
 
 def publish_response(client:mqtt.Client, response:str):
-    client.publish(config.mqtt_topic_publication, response)
+    client.publish(config["mqtt"]["mqtt_topic_publication"], response)
 
 def init_mqtt_client()->bool:
     global mqtt_client
     global mqtt_mode
-    mqtt_client.username_pw_set(config.mqtt_username,config.matt_password)
+    mqtt_client.username_pw_set(config["mqtt"]["mqtt_username"],config["mqtt"]["mqtt_password"])
     mqtt_client.on_connect = on_connect
     mqtt_client.on_message = on_message
     try:
-        error_code = int(mqtt_client.connect(config.mqtt_host,config.mqtt_port,60))
+        error_code = int(mqtt_client.connect(config["mqtt"]["mqtt_host"],config["mqtt"]["mqtt_port"],60))
     except Exception as error_code:
         write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {error_code}")
         return False
@@ -74,13 +72,9 @@ def init_mic()->bool:
     global device_index
     global use_internal_mic
 
-    #Check Language
-    if type(config.recognition_language)==config.recognitionLanguageCode: #convert enum to string
-        config.recognition_language = config.recognition_language.value
-    else:
-        if not config.recognition_language in {item.value for item in config.recognitionLanguageCode}:
-            write_log(f"No '{config.recognition_language}' language found for recognition: 'en-gb' will be set by default.")
-            config.recognition_language = config.recognitionLanguageCode.ENGLISH_GB
+    if not config["recognition_language"] in SrLanguages["RecognitionLanguageCode"].values():
+        write_log(f"No '{config['recognition_language']}' language found for recognition: 'en-gb' will be set by default.")
+        config["recognition_language"] = "en-gb"
 
     #Check Mic device
     audio = pyaudio.PyAudio()
@@ -89,18 +83,18 @@ def init_mic()->bool:
         device_info = audio.get_device_info_by_index(i)
         if device_info["maxOutputChannels"]>0:
             devices_list.add(device_info["name"])
-        if device_info["name"] == config.mic_name:
+        if device_info["name"] == config["mic_name"]:
             device_index = i
     audio.terminate()
 
     if device_index!=-1:
         write_log("Mic device found.")
         return True
-    elif config.mic_name == "default":
+    elif config["mic_name"] == "default":
         device_index = None
         return True
     else:
-        write_log("No Mic device found. That is the devices list:")
+        write_log(f"No '{config['mic_name']}' mic device found. That is the devices list:")
         write_log(", ".join(devices_list).strip(", "))
         return False
 
@@ -115,7 +109,7 @@ def start_listen():
 
 def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData)->str:
     try:
-        text = recognizer.recognize_google(audio, language=config.recognition_language)
+        text = recognizer.recognize_google(audio, language=config["recognition_language"])
         return f"You said: {text}"
     except sr.UnknownValueError:
         return "I didn't understand what you said."
@@ -133,10 +127,10 @@ def thread_listen(recognizer:sr.Recognizer, audio:sr.AudioData):
     write_log(text)
     if text != "I didn't understand what you said.":
         text = text[len("You said: "):]
-        if text.lower().startswith(config.activation_words):
+        if text.lower().startswith(config["activation_words"]):
             response = ask_to_chatgpt(request=text)
             if mqtt_mode:
-                MQTT_error_code = mqtt_client.publish(config.mqtt_topic_publication,response)
+                MQTT_error_code = mqtt_client.publish(config["mqtt_topic_publication"],response)
                 if MQTT_error_code.rc == MQTTErrorCode.MQTT_ERR_NO_CONN:
                     write_log("Unable to publish MQTT message to broker. Please check your username and password.")
             if use_internal_audio_output:
@@ -149,50 +143,47 @@ use_internal_audio_output = False
 def init_internal_output_audio()->bool:
 
     #set device
-    if config.out_device_name == None:
+    if config["out_device_name"] == None:
         return False
     pygame.mixer.init()
     devices = tuple(sdl2_audio.get_audio_device_names(False))
     if len(devices)==0:
         write_log("No output audio device found in your system.")
         return False
-    if config.out_device_name == "default":
-        config.out_device_name = None
+    if config["out_device_name"] == "default":
+        config["out_device_name"] = None
     else:
-        if not any(device == config.out_device_name for device in devices):
-            write_log(f"No output audio device found with name: '{config.out_device_name}'. Default will be set.")
+        if not any(device == config["out_device_name"] for device in devices):
+            write_log(f"No output audio device found with name: '{config['out_device_name']}'. Default will be set.")
             write_log("This is the list of output audio device available:")
             write_log(", ".join(devices).strip(", "))
-            config.out_device_name = "default"
-            config.out_device_name = None
+            config["out_device_name"] = "default"
+            config["out_device_name"] = None
     pygame.mixer.quit()
     
-    #set language
-    if type(config.out_language)==config.outLanguageCode: #converto to string if is an enum
-        config.out_language = config.out_language.value
-
-    if config.out_language == "default":
-        config.out_language = "en"
+    #set language 
+    if config["out_language"] == "default":
+        config["out_language"] = "en"
         return True
     
     langs_dic = langs._main_langs()
     found = False
     for k,v in langs_dic.items():
-        if k == config.out_language or v == config.out_language:
-            config.out_language = k
+        if k == config["out_language"] or v == config["out_language"]:
+            config["out_language"] = k
             found = True
     if not found:
-        write_log(f"No '{config.out_language}' language found for the output audio device: 'en' will be set by default")
-        config.out_language = "en"
+        write_log(f"No '{config['out_language']}' language found for the output audio device: 'en' will be set by default")
+        config["out_language"] = "en"
 
     return True
 
 def start_text_to_speech(text:str):
-    tts = gTTS(text,lang=config.out_language)
+    tts = gTTS(text,lang=config["out_language"])
     audio_fp = io.BytesIO()
     tts.write_to_fp(audio_fp)
     audio_fp.seek(0)
-    pygame.mixer.init(devicename=config.out_device_name)
+    pygame.mixer.init(devicename=config["out_device_name"])
     pygame.mixer.music.load(audio_fp, "mp3")
     pygame.mixer.music.play()
 
@@ -252,11 +243,21 @@ def ask_to_chatgpt(request:str)->str:
     return response
 
 #--------------------- System -------------------
+config = {}
+path_config_yaml = "config_files/config.yaml"
+SrLanguages = {}
+path_SrLanguages = "config_files/SrLanguages.yaml"
 
 def init_system():
+    global config
+    global SrLanguages
     list_file = os.listdir(os.getcwd())
     if any("log.txt"==file for file in list_file):
         os.remove("log.txt")
+    with open(path_config_yaml, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
+    with open(path_SrLanguages, "r", encoding="utf-8") as file:
+        SrLanguages = yaml.safe_load(file)
 def print_service_status():
     global use_internal_mic
     global mqtt_mode
