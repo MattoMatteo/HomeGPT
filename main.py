@@ -90,9 +90,12 @@ def init_mic()->bool:
     if device_index!=-1:
         write_log("Mic device found.")
         return True
-    elif config["mic_name"] == "default":
+    elif config["mic_name"] == "default" and audio.get_device_count()>0:
         device_index = None
         return True
+    elif config["mic_name"] == "default" and audio.get_device_count()==0:
+        write_log(f"no microphone devices found in the system")
+        return False
     else:
         write_log(f"No '{config['mic_name']}' mic device found. That is the devices list:")
         write_log(", ".join(devices_list).strip(", "))
@@ -127,10 +130,10 @@ def thread_listen(recognizer:sr.Recognizer, audio:sr.AudioData):
     write_log(text)
     if text != "I didn't understand what you said.":
         text = text[len("You said: "):]
-        if text.lower().startswith(config["activation_words"]):
+        if text.lower().startswith(tuple(config["activation_words"])):
             response = ask_to_chatgpt(request=text)
             if mqtt_mode:
-                MQTT_error_code = mqtt_client.publish(config["mqtt_topic_publication"],response)
+                MQTT_error_code = mqtt_client.publish(config["mqtt"]["mqtt_topic_publication"],response)
                 if MQTT_error_code.rc == MQTTErrorCode.MQTT_ERR_NO_CONN:
                     write_log("Unable to publish MQTT message to broker. Please check your username and password.")
             if use_internal_audio_output:
@@ -203,7 +206,13 @@ def ask_to_chatgpt(request:str)->str:
     #Set options of chrome
     opzioni_chrome = Options()
     opzioni_chrome.add_argument("headless")
-    prefs = {
+    opzioni_chrome.add_argument("--no-sandbox")  # Necessario in ambienti Docker
+    opzioni_chrome.add_argument("--disable-dev-shm-usage")  # Evita problemi di memoria condivisa
+    opzioni_chrome.add_argument("--disable-gpu")  # Utile per alcune configurazioni
+    if os.name != "nt":  # Se non è Windows (quindi Linux/macOS)
+        opzioni_chrome.add_argument("--user-data-dir=/tmp/chrome-user-data")
+
+    prefs = {\
     "download.default_directory": os.getcwd(),  # Modifica con il tuo percorso
     "download.prompt_for_download": False,  # Evita la richiesta di conferma del download
     "directory_upgrade": True,  # Permette il salvataggio automatico nella cartella impostata
@@ -231,7 +240,7 @@ def ask_to_chatgpt(request:str)->str:
     #estract the response from file.txt end erase it
     path_chat = "chat.txt"
     response = ""
-    with open(path_chat,"r",encoding='utf-8') as f:
+    with open(path_chat,"r", errors="ignore") as f:
         lines = []
         lines = f.readlines()
         for i, line in enumerate(lines):
@@ -282,7 +291,7 @@ def write_log(message:str):
     else:
         mode = "w"
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with open(path,"a") as f:
+    with open(path,"a", errors="ignore") as f:
         f.write(f"\n{timestamp} {message}")    
     print(f"\n{timestamp} {message}")
 
