@@ -276,7 +276,7 @@ def print_service_status():
     else:
         write_log("MQTT mode OFF")
 def write_log(message:str):
-    path = os.getcwd()+"/log.txt"
+    path = os.getcwd()+"/config_files/log.txt"
     if os.path.exists(path):
         mode = "a"
     else:
