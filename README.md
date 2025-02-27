@@ -31,9 +31,7 @@ cd HomeGPT
 git clone https://github.com/your-user/mqtt-voice-assistant.git
 cd mqtt-voice-assistant
 ```
-3. Modify the configuration files and docker-compose.yml:
-Modify the ./config_files/config.yaml file to set up your preferences:
-Modify the `/config_files/config.yaml` file to set up your preferences:
+3. Modify the configuration file (`/config_files/config.yaml`) and docker-compose.yml:
 ```yaml
 #Input mic device
         #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
