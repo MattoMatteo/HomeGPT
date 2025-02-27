@@ -15,9 +15,11 @@ import pygame._sdl2.audio as sdl2_audio
 #chrome for estract by https://chatgpt.it response
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from webdriver_manager.chrome import ChromeDriverManager
 
 #mqtt for comunication between software and broker to send response and if dont wanna use integrated mic
 import paho.mqtt.client as mqtt
@@ -85,20 +87,37 @@ def init_mic()->bool:
             devices_list.add(device_info["name"])
         if device_info["name"] == config["mic_name"]:
             device_index = i
-    audio.terminate()
 
     if device_index!=-1:
         write_log("Mic device found.")
         return True
+    elif config["mic_name"] == "default":
+        try:
+            mic_info = audio.get_default_input_device_info()
+            write_log(f'Default mic has ben set: {mic_info["name"]}')
+            device_index = None
+            audio.terminate()
+            return True
+        except Exception as e:
+            audio.terminate()
+            write_log(f"No microphone devices found in the system.")
+            return False
+
+
     elif config["mic_name"] == "default" and audio.get_device_count()>0:
+        mic_info = audio.get_default_input_device_info()
+        outputAudio_info = audio.get_default_output_device_info()
         device_index = None
+        audio.terminate()
         return True
     elif config["mic_name"] == "default" and audio.get_device_count()==0:
+        audio.terminate()
         write_log(f"no microphone devices found in the system")
         return False
     else:
         write_log(f"No '{config['mic_name']}' mic device found. That is the devices list:")
         write_log(", ".join(devices_list).strip(", "))
+        audio.terminate()
         return False
 
 def start_listen():
@@ -148,7 +167,12 @@ def init_internal_output_audio()->bool:
     #set device
     if config["out_device_name"] == None:
         return False
-    pygame.mixer.init()
+    try:
+        pygame.mixer.init()
+    except Exception as e:
+        write_log("can't initialize audio output.")
+        write_log(e)
+        return False
     devices = tuple(sdl2_audio.get_audio_device_names(False))
     if len(devices)==0:
         write_log("No output audio device found in your system.")
@@ -219,7 +243,8 @@ def ask_to_chatgpt(request:str)->str:
     "safebrowsing.enabled": True  # Disabilita il controllo SafeBrowsing per evitare blocchi sui file scaricati
     }
     opzioni_chrome.add_experimental_option("prefs",prefs)
-    driver = webdriver.Chrome(options=opzioni_chrome)
+    service_chrome = Service(executable_path=driver_path)
+    driver = webdriver.Chrome(options=opzioni_chrome, service=service_chrome)
     #Start driver and act on site
     driver.get("https://chatgpt.it")
     WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '[placeholder="Scrivi un messaggio"]'))).send_keys(request)
@@ -240,7 +265,7 @@ def ask_to_chatgpt(request:str)->str:
     #estract the response from file.txt end erase it
     path_chat = "chat.txt"
     response = ""
-    with open(path_chat,"r", errors="ignore") as f:
+    with open(path_chat,"r", errors="ignore", encoding="utf-8") as f:
         lines = []
         lines = f.readlines()
         for i, line in enumerate(lines):
@@ -256,17 +281,21 @@ config = {}
 path_config_yaml = "config_files/config.yaml"
 SrLanguages = {}
 path_SrLanguages = "config_files/SrLanguages.yaml"
-
+driver_path = ""
 def init_system():
     global config
     global SrLanguages
-    list_file = os.listdir(os.getcwd())
-    if any("log.txt"==file for file in list_file):
-        os.remove("log.txt")
+    global driver_path
+    if os.path.exists("./config_files/log.txt"):
+        os.remove("./config_files/log.txt")
+
     with open(path_config_yaml, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
+
     with open(path_SrLanguages, "r", encoding="utf-8") as file:
-        SrLanguages = yaml.safe_load(file)
+        SrLanguages = yaml.safe_load(file)       
+    driver_path = ChromeDriverManager().install()
+    pass
 def print_service_status():
     global use_internal_mic
     global mqtt_mode
@@ -291,7 +320,7 @@ def write_log(message:str):
     else:
         mode = "w"
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with open(path,"a", errors="ignore") as f:
+    with open(path, mode, errors="ignore") as f:
         f.write(f"\n{timestamp} {message}")    
     print(f"\n{timestamp} {message}")
 

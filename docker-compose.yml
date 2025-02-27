@@ -1,8 +1,0 @@
-services:
-  homegpt:
-      build: ./HomeGPT
-      image: "homegpt_image"
-      restart: unless-stopped
-      container_name: homegpt
-      volumes:
-        - ./HomeGPT/config_files:/app/config_files  

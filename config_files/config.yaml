@@ -3,7 +3,7 @@
         #2. "default" to automaticaly select a default mic input
         #3. The name of mic. If the mic will not found, the default will be used.
                 #If no one device will be find, check the log for the names list of devices available
-mic_name: None    
+mic_name: "default"    
 
 recognition_language: "it-it" #It uses Google APIs. For simplicity I have added a code list for the various languages in SrLanguages.ywaml: RecognitionLanguageCode.
 
@@ -17,7 +17,7 @@ activation_words: # a list of words that trigger speech recognition
         #2. "default" to automaticaly select a default audio output device
         #3. The name of audio output device. If the audio output device will not found, the default will be used.
                 #If no one device will be find, check the log for the names list of devices available
-out_device_name: null
+out_device_name: "default"
 
         #Language code:
         #1. It uses gtts (Google text to speech), so you can search your language code.

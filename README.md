@@ -16,9 +16,24 @@ The response is then played via internal speakers or sent via MQTT for smart hom
 ## ⚠️ Known Issues
 Using Selenium to query and extract data slows down the overall process (compared to using the APIs directly, which are paid for based on the number of tokens). This, combined with a small delay in transmitting and receiving MQTT signals, results in an average wait time of about 10 seconds, with rare cases reaching up to 15 seconds.
 
-## ⚙️ Configuration
-Modify the `config.yaml` file to set up your preferences:
+## 🔧 Installation via Docker and Docker Compose
+Make sure to have Docker and Docker Compose installed on your system.
+Building the Image Locally
+To build and run the project using Docker, you can build the image directly from the provided Dockerfile. This approach does not require a pre-built image:
 
+1. Create a folder:
+```bash
+mkdir HomeGPT
+cd HomeGPT
+```
+2. Clone the repository:
+```bash
+git clone https://github.com/your-user/mqtt-voice-assistant.git
+cd mqtt-voice-assistant
+```
+3. Modify the configuration files and docker-compose.yml:
+Modify the ./config_files/config.yaml file to set up your preferences:
+Modify the `/config_files/config.yaml` file to set up your preferences:
 ```yaml
 #Input mic device
         #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
@@ -54,8 +69,37 @@ mqtt:
   mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
   mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
 ```
-
 For language codes, refer to the `SrLanguages.yaml` file which contains list of different languages.
+
+Modify the docker-compose.yml file to suit your system. Here is an example configuration:
+```yml
+version: '3.8'
+
+services:
+  homegpt:
+    build: ./ 
+    image: "homegpt_image"
+    restart: unless-stopped
+    container_name: homegpt
+    volumes:
+      - ./config_files:/app/config_files  # Mounts configuration files for persistence
+    devices:
+      - "/dev/snd:/dev/snd"  
+      - "/dev/ttyUSB0:/dev/ttyUSB0"  # Check available devices with 'ls /dev/ttyUSB*'
+```
+The host's ALSA sound device (/dev/snd) is mapped inside the container. Ensure your system uses ALSA; otherwise, adjust accordingly
+The actual device path may vary depending on your system and connected hardware
+Note: You can place the docker-compose.yml file wherever you want, as long as it references the correct paths (e.g., ./config_files for the configuration files). The docker-compose command will pick it up as long as you are in the directory where the file is located.
+
+4. Build the Docker image:
+```bash
+docker-compose build 
+```
+5. Start the container:
+```bash
+docker-compose up -d
+```
+This will build the image from the provided Dockerfile and start the container.
 
 ## 🤖 Future Improvements
 - Use a chatgpt.com account and other LLMs and their APIs for those who wish.

@@ -1,5 +1,4 @@
 .venv/
 __pycache__/
 .vscode/
-log.txt
-my_config.yaml
+.gitignore
