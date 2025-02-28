@@ -11,7 +11,6 @@ import io
 import pygame.mixer
 import pygame._sdl2.audio as sdl2_audio
 
-
 #chrome for estract by https://chatgpt.it response
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -26,6 +25,8 @@ import paho.mqtt.client as mqtt
 from paho.mqtt.enums import MQTTErrorCode
 
 import yaml
+
+
 #----------- MQQT --------------
 
 mqtt_client = mqtt.Client()
@@ -335,14 +336,16 @@ def main():
 
     init_system()
     mqtt_mode = init_mqtt_client()
+
+    #thread = threading.Thread(target=run_flask) #run in a separate thread the api rest server
+    #thread.start()
+
     use_internal_mic = init_mic()
     if use_internal_mic:
         stop_listening = start_listen()
 
     use_internal_audio_output = init_internal_output_audio()
-
     print_service_status()
-
     while mqtt_mode or use_internal_mic:
         time.sleep(0.1)
 

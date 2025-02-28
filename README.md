@@ -28,8 +28,8 @@ cd HomeGPT
 ```
 2. Clone the repository:
 ```bash
-git clone https://github.com/your-user/mqtt-voice-assistant.git
-cd mqtt-voice-assistant
+git clone https://github.com/MattoMatteo/HomeGPT
+cd HomeGPT
 ```
 3. Modify the configuration file (`/config_files/config.yaml`) and docker-compose.yml:
 ```yaml
