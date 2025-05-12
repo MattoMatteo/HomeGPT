@@ -38,13 +38,15 @@ cd HomeGPT
         #2. "default" to automaticaly select a default mic input
         #3. The name of mic. If the mic will not found, the default will be used.
                 #If no one device will be find, check the log for the names list of devices available
-mic_name: None    
+mic_name: null    
 
 recognition_language: "it-it" #It uses Google APIs. For simplicity I have added a code list for the various languages in SrLanguages.ywaml: RecognitionLanguageCode.
 
 activation_words: # a list of words that trigger speech recognition
   - "hey google"
   - "alexa"   
+
+system_prompt: "" #System prompt that sets the AI's behavior, tone, and role before responding to user input.
 
 #output internal device
         #Device Name:
