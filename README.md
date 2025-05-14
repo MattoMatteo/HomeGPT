@@ -21,17 +21,12 @@ Make sure to have Docker and Docker Compose installed on your system.
 Building the Image Locally
 To build and run the project using Docker, you can build the image directly from the provided Dockerfile. This approach does not require a pre-built image:
 
-1. Create a folder:
-```bash
-mkdir HomeGPT
-cd HomeGPT
-```
-2. Clone the repository:
+1. Clone the repository:
 ```bash
 git clone https://github.com/MattoMatteo/HomeGPT
 cd HomeGPT
 ```
-3. Modify the configuration file (`/config_files/config.yaml`) and docker-compose.yml:
+2. Modify the configuration file (`/config_files/config.yaml`) and docker-compose.yml:
 ```yaml
 #Input mic device
         #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
@@ -91,11 +86,11 @@ The host's ALSA sound device (/dev/snd) is mapped inside the container. Ensure y
 The actual device path may vary depending on your system and connected hardware
 Note: You can place the docker-compose.yml file wherever you want, as long as it references the correct paths (e.g., ./config_files for the configuration files). The docker-compose command will pick it up as long as you are in the directory where the file is located.
 
-4. Build the Docker image:
+3. Build the Docker image:
 ```bash
 docker-compose build 
 ```
-5. Start the container:
+4. Start the container:
 ```bash
 docker-compose up -d
 ```
