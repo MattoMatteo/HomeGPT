@@ -53,7 +53,7 @@ class NetworkManager():
             response
         )
         try:
-            error_code.wait_for_publish()
+            error_code.wait_for_publish(1)
         except RuntimeError as e:
             write_log(
                 "Unable to publish MQTT message to broker. "
