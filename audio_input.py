@@ -1,79 +1,110 @@
+"""
+Module that manages audio inputs and therefore microphones.
+"""
 import time
-import speech_recognition as sr
-import pyaudio
-
-import system
-
 from collections import defaultdict
-import yaml
+
+import pyaudio
+import speech_recognition as sr
+
+from system import Configurations as Conf, ConfigKey, SrLanguagesKey
+from system import OutputPipelineManager as Pipeline
+from system import write_log
 
 #------------- Mic & Recognizer ----------------
-path_SrLanguages = "config_files/SrLanguages.yaml"
-
 class MicManager():
-
-    def init(self)->bool:
-        self.devices_list = self.get_micDeviceList()
-        self.defaultDeviceInfo = self.get_defaultMicDeviceInfo()
+    """
+    Class that finds and initializes the requested microphone
+    and starts the passive listening thread.
+    """
+    def __init__(self, mic_name:str, recognition_language:str):
+        #First: check whether it is possible to initialize a microphone.
+        self.devices_list = self.get_mic_device_list()
         if len(self.devices_list) == 0:
-            system.write_log("No mic devices found in system.")
-            return False
-        system.write_log("These are the available microphones:")
-        system.write_log(", ".join(d["name"] for d in self.devices_list).strip(", "))
+            write_log("No mic devices found in system.")
+            self.device_active = False
+            return
+        if mic_name is None:
+            write_log("No microphone will be used: config.yaml set to 'None'.")
+            self.device_active = False
+            return
+        write_log("These are the available microphones:")
+        write_log(", ".join(d["name"] for d in self.devices_list).strip(", "))
+        self.device_active = True
 
-        self.recognitionLanguage = "en-gb" #Standard
-        return True
+        #Second: set mic index
+        self.default_device_info = self.get_default_mic_device_info()
 
-    def init_mic(self, micName:str):
-        if micName == None:
-            return None
-        #1. Get index
-        self.deviceIndex= self.get_deviceIndex(micName)
+        self.device_index= self.get_device_index(mic_name)
 
-        #2. Logs
         log_message = ""
-        new_mic_name = ""
-        if self.deviceIndex == False: #Not found
-            log_message = "No '{old_mic_name}' mic found."
-            self.deviceIndex = None
+        self.mic_name = ""
+        if not self.device_index:
+            write_log(f"No '{mic_name}' mic found.")
+            mic_name = "default"
 
-        if self.deviceIndex == None: #Default set.
-            new_mic_name = self.defaultDeviceInfo["name"]
-            log_message = "Default mic has ben set: '{new_mic_name}'"
-            self.deviceIndex = self.defaultDeviceInfo["index"]
+        if mic_name == "default": #Default set.
+            self.mic_name = self.default_device_info["name"]
+            log_message = "Default mic has ben set: '{self.mic_name}'"
+            self.device_index = self.default_device_info["index"]
         else:   #Found
-            new_mic_name = micName
+            self.mic_name = mic_name
             log_message = "'{old_mic_name}' mic device found.".capitalize()
 
         context = defaultdict(str, {
-        "new_mic_name": new_mic_name,
-        "old_mic_name": micName,
+        "self.mic_name": self.mic_name,
+        "old_mic_name": mic_name,
         })
-        system.write_log(log_message.format_map(context)[0].upper()+log_message.format_map(context)[1:])
-        return self.start_listen(device_index = self.deviceIndex)
+        write_log(log_message.format_map(context)[0].upper() +
+                         log_message.format_map(context)[1:])
 
-    def set_recognitionLanguage(self, recognition_languge:str)->str:
-        with open(path_SrLanguages, "r", encoding="utf-8") as file:
-            SrLanguages:dict = yaml.safe_load(file)["RecognitionLanguageCode"]
+        self.set_recognition_language(recognition_language)
+        self.start_listen(device_index = self.device_index)
 
-        if not recognition_languge in SrLanguages.values():
-            system.write_log(f"No '{recognition_languge}' language found for recognition: 'en-gb' will be set by default.")
-            self.recognitionLanguage = "en-gb"
-        self.recognitionLanguage = recognition_languge
-        return self.recognitionLanguage
+    def set_recognition_language(self, recognition_languge:str):
+        """
+        Try to set given recognition language. If not found en-gb will be set by default.
+        """
+        if not Conf.find_st_languages_data(SrLanguagesKey.RECOGNITION_LANGUAGE_CODE,
+                                       recognition_languge) or recognition_languge == "default":
+            self.recognition_language = "en-gb"
+            if not recognition_languge == "default":
+                write_log(
+                    f"Recognition language for {self.mic_name} mic "
+                    f"not found ('{recognition_languge}'), 'en-gb' will be set by default."
+                )
+        else:
+            self.recognition_language = recognition_languge
+        write_log(f"Recognition language for {self.mic_name} mic "
+                  f"set to: {self.recognition_language}")
 
-    def get_defaultMicDeviceInfo(self):
+    def get_default_mic_device_info(self) -> dict:
+        """
+        Use pyaudio for get defautl device information.
+        Return a dict that have these keys:
+        {
+            "name": str,
+            "index": int,
+            "maxInputChannels": int, 
+            "maxOutputChannels": int,
+            ....other
+        }
+        """
         audio = pyaudio.PyAudio()
         mic_info = audio.get_default_input_device_info()
         audio.terminate()
         return mic_info
 
-    def isDeviceActive(self):
-        if not self.deviceIndex == False:
-            return True
-        return False
+    def is_device_active(self):
+        """
+        Returns true if the device could be initialized. 
+        """
+        return self.device_active
 
-    def get_micDeviceList(self)->list[int]:
+    def get_mic_device_list(self)->list[int]:
+        """
+        Return a list of device info (refer to get_default_mic_device_info()).
+        """
         audio = pyaudio.PyAudio()
         devices_list = []
         for i in range(audio.get_device_count()):
@@ -83,46 +114,59 @@ class MicManager():
         audio.terminate()
         return devices_list
 
-    def get_deviceIndex(self, deviceName:str):
-        device_index = False
+    def get_device_index(self, device_name:str) -> int | None:
+        """
+        Return index of given device_name in self.devices_list.
+        Return None if not found.
+        """
+        device_index = None
 
         audio = pyaudio.PyAudio()
         for device_info in self.devices_list:
-            if deviceName == device_info["name"] and device_info["hostApi"]==0:     #hostapi = 0 NON SO PERCHE'
+            if device_name == device_info["name"] and device_info["hostApi"]==0:
                 device_index = device_info["index"]
+                #hostapi = 0 NON SO PERCHE'
                 #DA SISTEMARE IL FATTO DEGLI OMONIMI. PER ORA TENGO SOLO IL PRIMO RISULTATO
-            
-        if deviceName == "default":
-            if audio.get_device_count()>0:
-                device_index = None                
-            
         audio.terminate()
         return device_index
 
     def start_listen(self, device_index:int):
+        """
+        Method that takes care of starting the microphone background listening thread
+        and sets the callback function to fire when something has been heard.
+        Returns a "stopper" function that, when called, stops the thread.
+        """
         recognizer = sr.Recognizer()
         audio_source = sr.Microphone(device_index=device_index)
         with audio_source as s:
             recognizer.adjust_for_ambient_noise(source=s)
 
-        stopper = recognizer.listen_in_background(source=audio_source,callback=speech_to_text)
+        stopper = recognizer.listen_in_background(source=audio_source,
+                                                  callback=create_callback(self))
         time.sleep(0.1)
         return stopper
-    
-micManager = MicManager()
 
-#Thread functions
+def create_callback(mic: MicManager):
+    """
+    Creates a callback function for `recognizer.listen_in_background` that passes an
+    additional parameter to `speech_to_text`.
+    Example:
+        stopper = recognizer.listen_in_background(source, create_callback(param))
+    """
+    def callback(recognizer, audio):
+        speech_to_text(recognizer, audio, mic)
+    return callback
 
-def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData):
+def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData, mic: MicManager):
     """
     Callback of thread that listen in background a mic.
     The audio data will be processed through the speech to text function to give the answer 
     """
-    system.write_log("Listening...\n")
+    write_log("Listening...\n")
     log_message = ""
     response = ""
     try:
-        response:str = recognizer.recognize_google(audio, language=micManager.recognitionLanguage)
+        response:str = recognizer.recognize_google(audio, language=mic.recognition_language)
         log_message = "You said: {response}"
     except sr.UnknownValueError:
         log_message = "I didn't understand what you said."
@@ -132,8 +176,10 @@ def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData):
     context = defaultdict(str, {
         "response": response,
     })
-    system.write_log(log_message.format_map(context))
+    write_log(log_message.format_map(context))
 
     if response != "":
-        if response.lower().startswith(tuple(system.conf.config["activation_words"])):
-            system.develops_and_response(response)
+        if response.lower().startswith(tuple(Conf.get_conf_data(ConfigKey.ACTIVATION_WORDS))):
+            Pipeline.run(response)
+
+mic_list: list[MicManager] = []

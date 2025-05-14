@@ -1,47 +1,83 @@
-#mqtt for comunication between software and broker to send response and if dont wanna use integrated mic
-import paho.mqtt.client as mqtt
-import system, reply_manager, audio_output
+"""
+Module that manages the software connectivity.
+Currently only the mqtt protocol is included.
+"""
+from paho.mqtt import client as mqtt_client
+from paho.mqtt.enums import MQTTErrorCode
+
+from system import Configurations as Conf, ConfigKey, OutputPipelineManager as Pipeline
+from system import write_log
 
 class NetworkManager():
-    def __init__(self):
-        self.mqtt_active = False
+    """
+    Manage all software connectivity services.
+    """
+    mqtt_active = False
+    mqtt_client = mqtt_client.Client()
 
-    def init_mqtt_client(self,username:str, password:str, host:str, port:int)->bool:
-        self.mqtt_client = mqtt.Client()
-        self.mqtt_client.username_pw_set(username,password)
-        self.mqtt_client.on_connect = on_connect
-        self.mqtt_client.on_message = on_message
+    @classmethod
+    def mqtt_connect_to_broker(cls,username:str, password:str, host:str, port:int)->bool:
+        """
+        Method that allows connection with a broker within your network.
+        The parameters used to connect will be taken from the config.yaml file.
+        If the broker parameters entered are incorrect, the initialization
+        will not be performed and False will be returned. True otherwise.
+        """
+        cls.mqtt_client.username_pw_set(username, password)
         try:
-            error_code = int(self.mqtt_client.connect(host, port, 60))
-        except Exception as error_code:
-            system.write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {error_code}")
-            self.mqtt_active = False
-            return False
-        
-        self.mqtt_client.loop_start()
-        self.mqtt_active = True
-        return True
-        
-    def mqtt_publish_response(self,response:str)->bool:
-        MQTT_error_code = self.mqtt_client.publish(system.conf.config["mqtt"]["mqtt_topic_publication"], response)
-        if MQTT_error_code.rc == mqtt.MQTTErrorCode.MQTT_ERR_NO_CONN:
-                system.write_log("Unable to publish MQTT message to broker. Please check your username and password.")
+            error_code = cls.mqtt_client.connect(host, port, 60)
+            if error_code != MQTTErrorCode.MQTT_ERR_SUCCESS:
                 return False
+        except ValueError as e:
+            write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {e}")
+            cls.mqtt_active = False
+            return False
+
+        write_log(f"Connected to the mqtt broker: {host}:{port}")
+        cls.mqtt_client.loop_start()
+        cls.mqtt_active = True
         return True
 
-networkmanager = NetworkManager()
+    @classmethod
+    def mqtt_publish_response(cls, response:str)->bool:
+        """
+        Method to publish a mqtt message to the topic set in the configuration file.
+        """
+        error_code = cls.mqtt_client.publish(
+            Conf.get_conf_data(ConfigKey.MQTT_TOPIC_PUBLICATION),
+            response
+        )
+        if error_code.rc == MQTTErrorCode.MQTT_ERR_NO_CONN:
+            write_log(
+                "Unable to publish MQTT message to broker."
+                "Please check your username and password.")
+            return False
+        return True
 
-def on_connect(client, userdata, flags, rc):
-    client.subscribe(system.conf.config["mqtt"]["mqtt_topic_subscription"])
+@NetworkManager.mqtt_client.connect_callback()
+def on_connect(client: mqtt_client.Client, _, __, ___):
+    """
+    Callback when broker accept our connection request.
+    At this point we can subscribe to topic that was specified in config.yaml.
+    """
+    client.subscribe(Conf.get_conf_data(ConfigKey.MQTT_TOPIC_SUBSCRIPTION))
 
-def on_message(client, userdata, msg):
-    if msg.topic == system.conf.config["mqtt"]["mqtt_topic_subscription"]:
+@NetworkManager.mqtt_client.message_callback()
+def on_message(_, __, msg: mqtt_client.MQTTMessage):
+    """
+    Callback when an incoming message arrive from broker.
+    """
+    if msg.topic == Conf.get_conf_data(ConfigKey.MQTT_TOPIC_SUBSCRIPTION):
         message = str(msg.payload.decode())
         topic = str(msg.topic)
-        system.write_log(f"Message received: {message} on topic {topic}")
+        write_log(f"Message received: {message} on topic {topic}")
+        Pipeline.run(message)
 
-        response = reply_manager.freeGPT.ask_to_chatgpt_noAPI(message)
-
-        networkmanager.mqtt_publish_response(client,response)
-        if audio_output.audioOutputManager.isDeviceActive():
-            audio_output.audioOutputManager.start_text_to_speech(response)
+def callback_for_pipeline(message:str):
+    """
+    Callback function for publishing output to the network,
+    based on user settings and network capabilities.
+    """
+    if NetworkManager.mqtt_active:
+        return NetworkManager.mqtt_publish_response(message)
+    return True

@@ -1,45 +1,76 @@
-import system, network, audio_input, audio_output, time
+"""
+Initial module where basic components like inputs and outputs are initialized
+and callback functions are loaded into the response pipeline
+"""
+import time
+
+from system import Configurations as Conf, ConfigKey
+from system import OutputPipelineManager as Pipeline
+from system import write_log, clear_log
+import network
+import audio_input
+import audio_output
+import reply_manager
 
 def print_service_status():
+    """
+    Convenience function for printing which services have been activated.
+    Like Mic, audio output and MQTT.
+    """
     log_message = ""
-    if audio_input.micManager.isDeviceActive():
+    if any(mic.is_device_active() for mic in audio_input.mic_list):
         log_message = "Internal mic mode ON"
     else:
         log_message = "Internal mic mode OFF"
-    system.write_log(log_message)
+    write_log(log_message)
 
-    if audio_output.audioOutputManager.isDeviceActive():
+    if any(device.is_device_active() for device in audio_output.audio_output_list):
         log_message = "Internal audio output mode ON"
     else:
         log_message = "Internal audio output mode OFF"
-    system.write_log(log_message)
+    write_log(log_message)
 
-    if network.networkmanager.mqtt_active:
+    if network.NetworkManager.mqtt_active:
         log_message = "MQTT mode ON"
     else:
         log_message = "MQTT mode OFF"
-    system.write_log(log_message)
+    write_log(log_message)
 
 #--------------------- Main ----------------------
 def main():
-    network.networkmanager.init_mqtt_client(username=system.conf.config["mqtt"]["mqtt_username"],
-                                            password=system.conf.config["mqtt"]["mqtt_password"],
-                                            host=system.conf.config["mqtt"]["mqtt_host"],
-                                            port=system.conf.config["mqtt"]["mqtt_port"])
+    """
+    Starting function where the basic components will be initialized,
+    based on the choices made in the configuration file.
+    Mqtt, microphone, audio output.
+    """
 
-    micOn = audio_input.micManager.init()
-    audioOutputOn = audio_output.audioOutputManager.init()
-    if micOn:
-        audio_input.micManager.set_recognitionLanguage(system.conf.config["recognition_language"])
-        internalMic_StopListening = audio_input.micManager.init_mic(system.conf.config['mic_name'])
+    clear_log()
+    network.NetworkManager.mqtt_connect_to_broker(
+        username=Conf.get_conf_data(ConfigKey.MQTT_USERNAME),
+        password=Conf.get_conf_data(ConfigKey.MQTT_PASSWORD),
+        host=Conf.get_conf_data(ConfigKey.MQTT_HOST),
+        port=Conf.get_conf_data(ConfigKey.MQTT_PORT)
+    )
 
-    if audioOutputOn: #At least 1 audio output was found in the system
-        audio_output.audioOutputManager.set_speechLanguageCode(system.conf.config["out_language"])
-        audio_output.audioOutputManager.init_OutDevice(system.conf.config["out_device_name"])
-        
+    #MIC_NAME and RECOGNITION_LANGUAGE will be a list to init more then one mic at time
+    audio_input.mic_list.append(
+        audio_input.MicManager(mic_name=Conf.get_conf_data(ConfigKey.MIC_NAME),
+            recognition_language=Conf.get_conf_data(ConfigKey.RECOGNITION_LANGUAGE))
+    )
+
+    #OUT_DEVICE_NAME will be a list to init more then one mic at time
+    audio_output.audio_output_list.append(
+        audio_output.AudioOutputManager(Conf.get_conf_data(ConfigKey.OUT_DEVICE_NAME),
+            speech_language=Conf.get_conf_data(ConfigKey.OUT_LANGUAGE))
+    )
+
+    Pipeline.register_elaboration_callback(reply_manager.callback_for_pipeline)
+    Pipeline.register_output_callbacks("network", network.callback_for_pipeline)
+    Pipeline.register_output_callbacks("audio_output", audio_output.callback_for_pipeline)
+
     print_service_status()
-
-    while network.networkmanager.mqtt_active or audio_input.micManager.isDeviceActive():
+    any_mic_active = any(mic.is_device_active() for mic in audio_input.mic_list)
+    while network.NetworkManager.mqtt_active or any_mic_active:
         time.sleep(0.1)
 
 if __name__ == "__main__":
