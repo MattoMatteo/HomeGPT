@@ -13,9 +13,6 @@ The response is then played via internal speakers or sent via MQTT for smart hom
 - 🔊 **Flexible Output**: Plays responses through internal speakers or devices connected via MQTT.
 - 🏡 **Smart Home Ready**: Easily integrates into home automation solutions.
 
-## ⚠️ Known Issues
-Using Selenium to query and extract data slows down the overall process (compared to using the APIs directly, which are paid for based on the number of tokens). This, combined with a small delay in transmitting and receiving MQTT signals, results in an average wait time of about 10 seconds, with rare cases reaching up to 15 seconds.
-
 ## 🔧 Installation via Docker and Docker Compose
 Make sure to have Docker and Docker Compose installed on your system.
 Building the Image Locally
