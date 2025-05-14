@@ -33,9 +33,10 @@ class NetworkManager():
             write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {e}")
             cls.mqtt_active = False
             return False
-
-        cls.mqtt_client.loop_start()
-        if not cls.mqtt_client.is_connected():
+        if cls.mqtt_client.loop_start() != MQTTErrorCode.MQTT_ERR_SUCCESS:
+            write_log(f"Unable to start mqtt loop. Error: {error_code}")
+            return False
+        if not cls.mqtt_publish_response(""):
             write_log("Unable to connect to broker. Check hostname/ip and port.")
             return False
         write_log(f"Connected to the mqtt broker: {host}:{port}")
