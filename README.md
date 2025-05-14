@@ -9,7 +9,7 @@ The response is then played via internal speakers or sent via MQTT for smart hom
 ## 🚀 Features
 - 🎙️ **Speech recognition**: Converts spoken words into text via Google's API.
 - 🔗 **MQTT integration**: Sends and receives messages to/from MQTT topics.
-- 💬 **ChatGPT Interaction**: Uses Selenium to retrieve responses from chatgpt.it.
+- 💬 **ChatGPT Interaction**: Uses request to retrieve responses from chatgpt.it.
 - 🔊 **Flexible Output**: Plays responses through internal speakers or devices connected via MQTT.
 - 🏡 **Smart Home Ready**: Easily integrates into home automation solutions.
 
