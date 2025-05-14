@@ -58,8 +58,8 @@ class AudioOutputManager():
             if device_name == "default":
                 log_message = "Default audio output has ben set: '{new_device_name}'"
             else:
-                log_message = "No '{old_device_name}' output device found."
-                "Default audio output has ben set: '{new_device_name}"
+                log_message = ("No '{old_device_name}' output device found."
+                "Default audio output has ben set: '{new_device_name}")
             self.device_name = self.default_audio_device_info["name"]
 
         context = defaultdict(str, {
@@ -144,9 +144,10 @@ def callback_for_pipeline(message:str):
     """
     audio_dict = {}
     for device in audio_output_list:
-        if device.speech_language not in audio_dict:
-            audio_dict[device.speech_language] = text_to_speech(
-                                                message, device.speech_language)
+        if device.is_device_active():
+            if device.speech_language not in audio_dict:
+                audio_dict[device.speech_language] = text_to_speech(
+                                                    message, device.speech_language)
 
     for device in audio_output_list:
         if device.is_device_active():

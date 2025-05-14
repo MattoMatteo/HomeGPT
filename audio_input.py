@@ -25,7 +25,7 @@ class MicManager():
             self.device_active = False
             return
         if mic_name is None:
-            write_log("No microphone will be used: config.yaml set to 'None'.")
+            write_log("No microphone will be used: 'None' has been set in config.yaml.")
             self.device_active = False
             return
         write_log("These are the available microphones:")
@@ -45,14 +45,14 @@ class MicManager():
 
         if mic_name == "default": #Default set.
             self.mic_name = self.default_device_info["name"]
-            log_message = "Default mic has ben set: '{self.mic_name}'"
+            log_message = "Default mic has ben set: '{self_mic_name}'"
             self.device_index = self.default_device_info["index"]
         else:   #Found
             self.mic_name = mic_name
             log_message = "'{old_mic_name}' mic device found.".capitalize()
 
         context = defaultdict(str, {
-        "self.mic_name": self.mic_name,
+        "self_mic_name": self.mic_name,
         "old_mic_name": mic_name,
         })
         write_log(log_message.format_map(context)[0].upper() +

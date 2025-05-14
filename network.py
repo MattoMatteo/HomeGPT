@@ -2,6 +2,7 @@
 Module that manages the software connectivity.
 Currently only the mqtt protocol is included.
 """
+from socket import gaierror
 from paho.mqtt import client as mqtt_client
 from paho.mqtt.enums import MQTTErrorCode
 
@@ -28,13 +29,16 @@ class NetworkManager():
             error_code = cls.mqtt_client.connect(host, port, 60)
             if error_code != MQTTErrorCode.MQTT_ERR_SUCCESS:
                 return False
-        except ValueError as e:
+        except (ValueError, TypeError, gaierror, ConnectionRefusedError) as e:
             write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {e}")
             cls.mqtt_active = False
             return False
 
-        write_log(f"Connected to the mqtt broker: {host}:{port}")
         cls.mqtt_client.loop_start()
+        if not cls.mqtt_client.is_connected():
+            write_log("Unable to connect to broker. Check hostname/ip and port.")
+            return False
+        write_log(f"Connected to the mqtt broker: {host}:{port}")
         cls.mqtt_active = True
         return True
 
@@ -47,10 +51,12 @@ class NetworkManager():
             Conf.get_conf_data(ConfigKey.MQTT_TOPIC_PUBLICATION),
             response
         )
-        if error_code.rc == MQTTErrorCode.MQTT_ERR_NO_CONN:
+        try:
+            error_code.wait_for_publish()
+        except RuntimeError as e:
             write_log(
-                "Unable to publish MQTT message to broker."
-                "Please check your username and password.")
+                "Unable to publish MQTT message to broker. "
+                f"Error code: {e}.")
             return False
         return True
 

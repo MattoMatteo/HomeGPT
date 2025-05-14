@@ -43,7 +43,6 @@ def main():
     based on the choices made in the configuration file.
     Mqtt, microphone, audio output.
     """
-
     clear_log()
     network.NetworkManager.mqtt_connect_to_broker(
         username=Conf.get_conf_data(ConfigKey.MQTT_USERNAME),

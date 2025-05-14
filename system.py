@@ -11,7 +11,7 @@ from enum import Enum
 import yaml
 
 CONFIG_PATH = "./config_files/config.yaml"
-SR_LANGUAGES_PATH = "config_files/SrLanguages.yaml"
+SR_LANGUAGES_PATH = "./config_files/SrLanguages.yaml"
 LOG_PATH = "./config_files/log.txt"
 
 def write_log(message:str):
