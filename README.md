@@ -53,13 +53,12 @@ out_device_name: null
         #2. If an invalid code will be insert, "en" will be set by default. For simplicity I have added a code list for the various languages in SrLanguages.yaml: OutLanguageCode.
 out_language: "it"
 
-mqtt:    
-  mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
-  mqtt_username: ""
-  matt_password: ""
-  mqtt_port: 1883
-  mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
-  mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
+mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
+mqtt_username: ""
+matt_password: ""
+mqtt_port: 1883
+mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
+mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
 ```
 For language codes, refer to the `SrLanguages.yaml` file which contains list of different languages.
 
