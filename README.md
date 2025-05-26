@@ -55,7 +55,7 @@ out_language: "it"
 
 mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
 mqtt_username: ""
-matt_password: ""
+mqtt_password: ""
 mqtt_port: 1883
 mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
 mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
