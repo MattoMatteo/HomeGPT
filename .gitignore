@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
 .vscode/
-config_files/log.txt
 my_config.yaml
 .env

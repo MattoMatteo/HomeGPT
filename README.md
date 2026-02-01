@@ -90,14 +90,14 @@ services:
     env_file:
       - .env
     volumes:
-      - ./config_files:/app/config_files  # Mounts configuration files for persistence
+      - ./:/app
     devices:
       - "/dev/snd:/dev/snd"
       - "/dev/ttyUSB0:/dev/ttyUSB0"  # Check available devices with 'ls /dev/ttyUSB*'
 ```
 The host's ALSA sound device (/dev/snd) is mapped inside the container. Ensure your system uses ALSA; otherwise, adjust accordingly
 The actual device path may vary depending on your system and connected hardware
-Note: You can place the docker-compose.yml file wherever you want, as long as it references the correct paths (e.g., ./config_files for the configuration files). The docker-compose command will pick it up as long as you are in the directory where the file is located.
+Note: You can place the docker-compose.yml file wherever you want, as long as it references the correct paths. The docker-compose command will pick it up as long as you are in the directory where the file is located.
 
 5. Build the Docker image:
 ```bash
