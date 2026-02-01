@@ -55,7 +55,7 @@ class Configurations():
     load_dotenv()
     _data["mqtt_username"] = os.getenv("MQTT_USERNAME", "")
     _data["mqtt_password"] = os.getenv("MQTT_PASSWORD", "")
-    _data["mqtt_port"] = os.getenv("MQTT_PORT", "")
+    _data["mqtt_port"] = int(os.getenv("MQTT_PORT", ""))
     _data["mqtt_host"] = os.getenv("MQTT_HOST", "")
 
     with open(SR_LANGUAGES_PATH, 'r', encoding="utf-8") as sr_file:
