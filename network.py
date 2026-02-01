@@ -7,7 +7,9 @@ from paho.mqtt import client as mqtt_client
 from paho.mqtt.enums import MQTTErrorCode
 
 from system import Configurations as Conf, ConfigKey, OutputPipelineManager as Pipeline
-from system import write_log
+from log_manager import setup_logger
+
+logger = setup_logger("NETWORK")
 
 class NetworkManager():
     """
@@ -30,16 +32,16 @@ class NetworkManager():
             if error_code != MQTTErrorCode.MQTT_ERR_SUCCESS:
                 return False
         except (ValueError, TypeError, gaierror, ConnectionRefusedError) as e:
-            write_log(f"Unable to connect to broker. Check hostname/ip and port. Error: {e}")
+            logger.error(f"Unable to connect to broker. Check hostname/ip and port. Error: {e}")
             cls.mqtt_active = False
             return False
         if cls.mqtt_client.loop_start() != MQTTErrorCode.MQTT_ERR_SUCCESS:
-            write_log(f"Unable to start mqtt loop. Error: {error_code}")
+            logger.error(f"Unable to start mqtt loop. Error: {error_code}")
             return False
         if not cls.mqtt_publish_response(""):
-            write_log("Unable to connect to broker. Check hostname/ip and port.")
+            logger.error("Unable to connect to broker. Check hostname/ip and port.")
             return False
-        write_log(f"Connected to the mqtt broker: {host}:{port}")
+        logger.error(f"Connected to the mqtt broker: {host}:{port}")
         cls.mqtt_active = True
         return True
 
@@ -55,7 +57,7 @@ class NetworkManager():
         try:
             error_code.wait_for_publish(1)
         except RuntimeError as e:
-            write_log(
+            logger.error(
                 "Unable to publish MQTT message to broker. "
                 f"Error code: {e}.")
             return False
@@ -77,7 +79,7 @@ def on_message(_, __, msg: mqtt_client.MQTTMessage):
     if msg.topic == Conf.get_conf_data(ConfigKey.MQTT_TOPIC_SUBSCRIPTION):
         message = str(msg.payload.decode())
         topic = str(msg.topic)
-        write_log(f"Message received: {message} on topic {topic}")
+        logger.info(f"Message received: {message} on topic {topic}")
         Pipeline.run(message)
 
 def callback_for_pipeline(message:str):

@@ -13,7 +13,9 @@ from pygame import mixer as pygame_mixer, error as pygame_error # pylint: disabl
 import pygame._sdl2.audio as _sdl2_audio
 from gtts import gTTS, lang
 
-from system import write_log
+from log_manager import setup_logger
+
+logger = setup_logger("AUDIO_OUTPUT")
 
 class AudioOutputManager():
     """
@@ -30,19 +32,20 @@ class AudioOutputManager():
         try:
             pygame_mixer.init()
         except pygame_error as e:
-            write_log("Can't initialize audio output. Pygame mixer problem.")
-            write_log(e)
+            logger.error(f"Can't initialize audio output. Pygame mixer problem: {e}")
             self._device_active = False
             return
 
         self.devices_list = tuple(_sdl2_audio.get_audio_device_names(False)) # pylint: disable=c-extension-no-member
         if len(self.devices_list) == 0:
-            write_log("No out audio devices found in system.")
+            logger.error("No out audio devices found in system.")
             self._device_active = False
             return
 
-        write_log("This is the list of output audio device available:")
-        write_log(", ".join(name for name in self.devices_list).strip(", "))
+        logger.error(
+            f"This is the list of output audio device available:\n"
+            f"{', '.join(self.devices_list).strip(', ')}"
+        )
 
         #Get device name(Pygame will use device name not index).
         self.default_audio_device_info = self.get_default_out_audio_device_info()
@@ -66,10 +69,10 @@ class AudioOutputManager():
         "new_device_name": self.device_name,
         "old_device_name": device_name,
         })
-        write_log(
-            log_message.format_map(context)[0].upper() +
-            log_message.format_map(context)[1:]
-        )
+        full_message = log_message.format_map(context)
+        if full_message:
+            logger.info(full_message[0].upper() + full_message[1:])
+
         self._device_active = True
         self.set_speech_language_code(speech_language)
 
@@ -104,14 +107,14 @@ class AudioOutputManager():
         for k,v in langs_dic.items():
             if language in (k, v):
                 self.speech_language = k
-                write_log(f"{self.device_name} speech language set to {self.speech_language}")
+                logger.info(f"{self.device_name} speech language set to {self.speech_language}")
                 return
 
         self.speech_language = "en"
         if language == "default":
-            write_log(f"{self.device_name} speech language set to 'en'")
+            logger.info(f"{self.device_name} speech language set to 'en'")
         else:
-            write_log(
+            logger.warning(
                 f"No '{language}' language found for {self.device_name} device, "
                 "'en' will be set by default"
             )

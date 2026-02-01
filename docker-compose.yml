@@ -1,0 +1,13 @@
+services:
+  homegpt:
+    build: ./ 
+    image: "homegpt_image"
+    restart: unless-stopped
+    container_name: homegpt
+    env_file:
+      - .env
+    volumes:
+      - ./config_files:/app/config_files  # Mounts configuration files for persistence
+    devices:
+      - "/dev/snd:/dev/snd"
+      - "/dev/ttyUSB0:/dev/ttyUSB0"  # Check available devices with 'ls /dev/ttyUSB*'

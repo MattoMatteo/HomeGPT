@@ -5,68 +5,55 @@ At the moment only the free mode of chatgpt via requst is present,
 in the future implementation of other api of various models and responses
 do not generate via ai.
 """
+import os
+import json
+
 import requests
 from bs4 import BeautifulSoup
 
 from system import Configurations as Conf, ConfigKey
-from system import write_log
+from log_manager import setup_logger
 
-def _ask_to_chatgpt_no_api(message:str)->str:
+logger = setup_logger("REPLY_MANAGER")
+
+
+def _ask_to_openrouter_model(message:str)->str:
     """
-    Processing the response using chatgpt without using its api.
-    The response is made by using post requests to https://www.chatgpt.it,
-    a third-party site that also uses the official api.
-
-    First we need to get _wpnonce for the post request.
-    So we must do a get and then serach wpaicg-chat-shortcode class
-    and get the "data-nonce" data.
-    That will be the _wpnonce to put in the payload.
-    We can generate a random client_id.
-    Post_id and bot_id can get at same way and put all in the payload.
-
-    The system prompt will be added to the chat history to set a context
     """
-    url = "https://chatgpt.it/"
-    session = requests.Session()
-    response = session.get(url)
-    html = response.text
+    api_key = Conf.get_conf_data(ConfigKey.OPEN_ROUTER_API)
+    model = Conf.get_conf_data(ConfigKey.OPEN_ROUTER_MODEL)
 
-    soup = BeautifulSoup(html, "html.parser")
-    chat_div = soup.find("div", class_="wpaicg-chat-shortcode")
-
-    if not chat_div:
-        write_log("Error to find wpaicg-chat-shortcode. Aborting request.")
-        return ""
-
-    nonce = chat_div.get("data-nonce")
-    post_id = chat_div.get("data-post-id")
-    bot_id = chat_div.get("data-bot-id")
-    client_id = "NzaxpK6bZf"
-
-    post_url = "https://chatgpt.it/wp-admin/admin-ajax.php"
-    payload = {
-        "_wpnonce": nonce,
-        "post_id": post_id,
-        "url": url,
-        "action": "wpaicg_chat_shortcode_message",
-        "message": message,
-        "bot_id": bot_id,
-        "chatbot_identity": "shortcode",
-        "wpaicg_chat_history": "[]",
-        "wpaicg_chat_client_id": client_id
-    }
-    payload["wpaicg_chat_history"] = f"""[{{"text":"Human:
-                                    {Conf.get_conf_data(ConfigKey.SYSTEM_PROMPT)}"}}]"""
+    if not api_key or not model:
+        raise ValueError(
+            "OPENROUTER_API_KEY or OPEN_ROUTER_MODEL not found in environment."
+            "Please check .env file and docker-compose.yml."
+        )
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    
     headers = {
-        "Origin": "https://chatgpt.it",
-        "Referer": "https://chatgpt.it/",
-        "User-Agent": "Mozilla/5.0",
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-Title": "HomeGPY",
     }
 
-    response = session.post(post_url, data=payload, headers=headers)
+    prompt = Conf.get_conf_data(ConfigKey.SYSTEM_PROMPT) + "\n" + message
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
+    }
 
-    re_json = response.json()
-    return re_json["data"]
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        response.raise_for_status()
+        
+        data = response.json()
+        return data["choices"][0]["message"]["content"]
+
+    except requests.exceptions.RequestException as e:
+        return ""
 
 def callback_for_pipeline(message:str)->str:
     """
@@ -76,4 +63,4 @@ def callback_for_pipeline(message:str)->str:
 
     For now only chatgpt_no_api is implemented, so it will simply be executed
     """
-    return _ask_to_chatgpt_no_api(message)
+    return _ask_to_openrouter_model(message)

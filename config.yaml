@@ -26,9 +26,14 @@ out_device_name: "default"
         #2. If an invalid code will be insert, "en" will be set by default. For simplicity I have added a code list for the various languages in SrLanguages.yaml: OutLanguageCode.
 out_language: "it"
 
-mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
-mqtt_username: ""
-mqtt_password: ""
-mqtt_port: 1883
+# MQTT
+        # 1. Set your topics. Broker must be allineated with this choice.
+        # 2. MQTT_HOST, MQTT_USERNAME, MQTT_PASSWORD and MQTT_PORT must be in .env file
 mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
 mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
+
+# Model
+        # OPEN_ROUTER_MODEL
+        # 1. Insert model name to use.
+        # 2. api key must be in .env file
+OPEN_ROUTER_MODEL: "openai/gpt-4.1" # for example

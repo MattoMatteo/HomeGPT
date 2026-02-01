@@ -6,11 +6,13 @@ import time
 
 from system import Configurations as Conf, ConfigKey
 from system import OutputPipelineManager as Pipeline
-from system import write_log, clear_log
+from log_manager import setup_logger
 import network
 import audio_input
 import audio_output
 import reply_manager
+
+logger = setup_logger("MAIN")
 
 def print_service_status():
     """
@@ -22,19 +24,19 @@ def print_service_status():
         log_message = "Internal mic mode ON"
     else:
         log_message = "Internal mic mode OFF"
-    write_log(log_message)
+    logger.info(log_message)
 
     if any(device.is_device_active() for device in audio_output.audio_output_list):
         log_message = "Internal audio output mode ON"
     else:
         log_message = "Internal audio output mode OFF"
-    write_log(log_message)
+    logger.info(log_message)
 
     if network.NetworkManager.mqtt_active:
         log_message = "MQTT mode ON"
     else:
         log_message = "MQTT mode OFF"
-    write_log(log_message)
+    logger.info(log_message)
 
 #--------------------- Main ----------------------
 def main():
@@ -43,7 +45,6 @@ def main():
     based on the choices made in the configuration file.
     Mqtt, microphone, audio output.
     """
-    clear_log()
     network.NetworkManager.mqtt_connect_to_broker(
         username=Conf.get_conf_data(ConfigKey.MQTT_USERNAME),
         password=Conf.get_conf_data(ConfigKey.MQTT_PASSWORD),

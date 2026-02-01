@@ -4,36 +4,18 @@ such as: configurations, a modified method for writing logs and, most importantl
 the pipeline class to generate the response that can be called from various input services.
 """
 import os
-import time
 from typing import Any, Callable
-
 from enum import Enum
 import yaml
 
-CONFIG_PATH = "./config_files/config.yaml"
-SR_LANGUAGES_PATH = "./config_files/SrLanguages.yaml"
-LOG_PATH = "./config_files/log.txt"
+from dotenv import load_dotenv
 
-def write_log(message:str):
-    """
-    Function for simultaneously writing a log to a file and to the terminal.
-    """
-    path = os.getcwd()+"/config_files/log.txt"
-    if os.path.exists(path):
-        mode = "a"
-    else:
-        mode = "w"
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    with open(path, mode, errors="ignore", encoding="utf-8") as f:
-        f.write(f"\n{timestamp} {message}")
-    print(f"\n{timestamp} {message}")
+from log_manager import setup_logger
 
-def clear_log() -> None:
-    """
-    Delete log file if it exists.
-    """
-    if os.path.exists(LOG_PATH):
-        os.remove(LOG_PATH)
+logger = setup_logger("SYSTEM")
+
+CONFIG_PATH = "./config.yaml"
+SR_LANGUAGES_PATH = "./SrLanguages.yaml"
 
 class SrLanguagesKey(Enum):
     """
@@ -59,13 +41,23 @@ class ConfigKey(Enum):
     MQTT_TOPIC_SUBSCRIPTION = "mqtt_topic_subscription"
     MQTT_TOPIC_PUBLICATION = "mqtt_topic_publication"
 
+    OPEN_ROUTER_API = "api key for models"
+    OPEN_ROUTER_MODEL = "model name to use"
+
 class Configurations():
     """
     Class that manages the import of configuration files
     and their use within the software
     """
+    # _data = config.yaml + .env keys:
     with open(CONFIG_PATH, "r", encoding="utf-8") as config_file:
         _data = yaml.safe_load(config_file)
+    load_dotenv()
+    _data["mqtt_username"] = os.getenv("MQTT_USERNAME", "")
+    _data["mqtt_password"] = os.getenv("MQTT_PASSWORD", "")
+    _data["mqtt_port"] = os.getenv("MQTT_PORT", "")
+    _data["mqtt_host"] = os.getenv("MQTT_HOST", "")
+
     with open(SR_LANGUAGES_PATH, 'r', encoding="utf-8") as sr_file:
         _sr_data = yaml.safe_load(sr_file)
 
@@ -99,7 +91,7 @@ class OutputPipelineManager():
     @staticmethod
     def _noop_callback(_) -> Any:
         """Callback placeholder."""
-        write_log("No elaboration callback has ben set.")
+        logger.error("No elaboration callback has ben set.")
 
     _elaboration_callback = _noop_callback
     _output_callbacks = {}
@@ -126,11 +118,11 @@ class OutputPipelineManager():
 
         output_data = cls._elaboration_callback(input_data)
         if not output_data:
-            write_log("No elaboration callback set.")
+            logger.error("No elaboration callback set.")
             return
         for name, callback in cls._output_callbacks.items():
             if callable(callback):
-                write_log(f"Output callback run: {name}")
+                logger.info(f"Output callback run: {name}")
                 callback(output_data)
 
     @classmethod

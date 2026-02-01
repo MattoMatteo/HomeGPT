@@ -9,7 +9,9 @@ import speech_recognition as sr
 
 from system import Configurations as Conf, ConfigKey, SrLanguagesKey
 from system import OutputPipelineManager as Pipeline
-from system import write_log
+from log_manager import setup_logger
+
+logger = setup_logger("AUDIO_INPUT")
 
 #------------- Mic & Recognizer ----------------
 class MicManager():
@@ -21,15 +23,17 @@ class MicManager():
         #First: check whether it is possible to initialize a microphone.
         self.devices_list = self.get_mic_device_list()
         if len(self.devices_list) == 0:
-            write_log("No mic devices found in system.")
+            logger.warning("No mic devices found in system.")
             self.device_active = False
             return
         if mic_name is None:
-            write_log("No microphone will be used: 'None' has been set in config.yaml.")
+            logger.warning("No microphone will be used: 'None' has been set in config.yaml.")
             self.device_active = False
             return
-        write_log("These are the available microphones:")
-        write_log(", ".join(d["name"] for d in self.devices_list).strip(", "))
+        logger.info(
+            f"These are the available microphones:\n"
+            f"{', '.join(d["name"] for d in self.devices_list).strip(', ')}"
+        )
         self.device_active = True
 
         #Second: set mic index
@@ -40,7 +44,7 @@ class MicManager():
         log_message = ""
         self.mic_name = ""
         if not self.device_index:
-            write_log(f"No '{mic_name}' mic found.")
+            logger.warning(f"No '{mic_name}' mic found.")
             mic_name = "default"
 
         if mic_name == "default": #Default set.
@@ -55,8 +59,9 @@ class MicManager():
         "self_mic_name": self.mic_name,
         "old_mic_name": mic_name,
         })
-        write_log(log_message.format_map(context)[0].upper() +
-                         log_message.format_map(context)[1:])
+        format_message = log_message.format_map(context)
+        if format_message:
+            logger.info(format_message[0].upper() + format_message[1:])
 
         self.set_recognition_language(recognition_language)
         self.start_listen(device_index = self.device_index)
@@ -69,13 +74,13 @@ class MicManager():
                                        recognition_languge) or recognition_languge == "default":
             self.recognition_language = "en-gb"
             if not recognition_languge == "default":
-                write_log(
+                logger.warning(
                     f"Recognition language for {self.mic_name} mic "
                     f"not found ('{recognition_languge}'), 'en-gb' will be set by default."
                 )
         else:
             self.recognition_language = recognition_languge
-        write_log(f"Recognition language for {self.mic_name} mic "
+        logger.info(f"Recognition language for {self.mic_name} mic "
                   f"set to: {self.recognition_language}")
 
     def get_default_mic_device_info(self) -> dict:
@@ -162,7 +167,7 @@ def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData, mic: MicManager
     Callback of thread that listen in background a mic.
     The audio data will be processed through the speech to text function to give the answer 
     """
-    write_log("Listening...\n")
+    logger.info("Listening...\n")
     log_message = ""
     response = ""
     try:
@@ -176,7 +181,9 @@ def speech_to_text(recognizer:sr.Recognizer, audio:sr.AudioData, mic: MicManager
     context = defaultdict(str, {
         "response": response,
     })
-    write_log(log_message.format_map(context))
+    format_message = log_message.format_map(context)
+    if format_message:
+        logger.info(format_message)
 
     if response != "":
         if response.lower().startswith(tuple(Conf.get_conf_data(ConfigKey.ACTIVATION_WORDS))):

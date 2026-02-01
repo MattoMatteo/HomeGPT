@@ -23,7 +23,7 @@ To build and run the project using Docker, you can build the image directly from
 git clone https://github.com/MattoMatteo/HomeGPT
 cd HomeGPT
 ```
-2. Modify the configuration file (`/config_files/config.yaml`) and docker-compose.yml:
+2. Modify the configuration file (`/config_files/config.yaml`):
 ```yaml
 #Input mic device
         #1. Set to null if you dont wanna use internal mic but just another device that comunicate with MQTT
@@ -53,40 +53,57 @@ out_device_name: null
         #2. If an invalid code will be insert, "en" will be set by default. For simplicity I have added a code list for the various languages in SrLanguages.yaml: OutLanguageCode.
 out_language: "it"
 
-mqtt_host: "" #set ip or hostname: example "192.168.1.1" 
-mqtt_username: ""
-mqtt_password: ""
-mqtt_port: 1883
+# MQTT
+        # 1. Set your topics. Broker must be allineated with this choice.
+        # 2. MQTT_HOST, MQTT_USERNAME, MQTT_PASSWORD and MQTT_PORT must be in .env file
 mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
 mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
+
+# Model
+        # OPEN_ROUTER_MODEL
+        # 1. Insert model name to use.
+        # 2. api key must be in .env file
+OPEN_ROUTER_MODEL: "openai/gpt-4.1" # for example
 ```
 For language codes, refer to the `SrLanguages.yaml` file which contains list of different languages.
 
-Modify the docker-compose.yml file to suit your system. Here is an example configuration:
-```yml
-version: '3.8'
+3. Add a `.env` file and add like this:  
 
+```ini
+mqtt_host="" #set ip or hostname: example '192.168.1.1'
+mqtt_username=""
+mqtt_password=""
+mqtt_port=1883
+
+OPEN_ROUTER_API=""
+```
+
+4. Modify the docker-compose.yml file to suit your system. Here is an example configuration:  
+
+```yml
 services:
   homegpt:
     build: ./ 
     image: "homegpt_image"
     restart: unless-stopped
     container_name: homegpt
+    env_file:
+      - .env
     volumes:
       - ./config_files:/app/config_files  # Mounts configuration files for persistence
     devices:
-      - "/dev/snd:/dev/snd"  
+      - "/dev/snd:/dev/snd"
       - "/dev/ttyUSB0:/dev/ttyUSB0"  # Check available devices with 'ls /dev/ttyUSB*'
 ```
 The host's ALSA sound device (/dev/snd) is mapped inside the container. Ensure your system uses ALSA; otherwise, adjust accordingly
 The actual device path may vary depending on your system and connected hardware
 Note: You can place the docker-compose.yml file wherever you want, as long as it references the correct paths (e.g., ./config_files for the configuration files). The docker-compose command will pick it up as long as you are in the directory where the file is located.
 
-3. Build the Docker image:
+5. Build the Docker image:
 ```bash
 docker-compose build 
 ```
-4. Start the container:
+6. Start the container:
 ```bash
 docker-compose up -d
 ```
