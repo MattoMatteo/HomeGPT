@@ -5,6 +5,7 @@ charset-normalizer==3.4.2
 click==8.1.8
 colorama==0.4.6
 dill==0.4.0
+python-dotenv==1.2.1
 gTTS==2.5.4
 idna==3.10
 isort==6.0.1
