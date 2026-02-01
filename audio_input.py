@@ -32,7 +32,7 @@ class MicManager():
             return
         logger.info(
             f"These are the available microphones:\n"
-            f"{', '.join(d["name"] for d in self.devices_list).strip(', ')}"
+            f"{', '.join(d['name'] for d in self.devices_list).strip(', ')}"
         )
         self.device_active = True
 
