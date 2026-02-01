@@ -33,7 +33,7 @@ mqtt_topic_subscription: "HomeGPT/listen" #topic listening FROM broker
 mqtt_topic_publication: "HomeGPT/respond" #publication topic TO THE broker
 
 # Model
-        # OPEN_ROUTER_MODEL
+        # open_router_model
         # 1. Insert model name to use.
         # 2. api key must be in .env file
-OPEN_ROUTER_MODEL: "openai/gpt-4.1" # for example
+open_router_model: "openai/gpt-4.1" # for example

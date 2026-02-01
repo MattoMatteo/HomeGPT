@@ -41,8 +41,8 @@ class ConfigKey(Enum):
     MQTT_TOPIC_SUBSCRIPTION = "mqtt_topic_subscription"
     MQTT_TOPIC_PUBLICATION = "mqtt_topic_publication"
 
-    OPEN_ROUTER_API = "api key for models"
-    OPEN_ROUTER_MODEL = "model name to use"
+    OPEN_ROUTER_API = "open_router_api"
+    OPEN_ROUTER_MODEL = "open_router_model"
 
 class Configurations():
     """
@@ -57,6 +57,7 @@ class Configurations():
     _data["mqtt_password"] = os.getenv("MQTT_PASSWORD", "")
     _data["mqtt_port"] = int(os.getenv("MQTT_PORT", ""))
     _data["mqtt_host"] = os.getenv("MQTT_HOST", "")
+    _data["open_router_api"] = os.getenv("OPEN_ROUTER_API", "")
 
     with open(SR_LANGUAGES_PATH, 'r', encoding="utf-8") as sr_file:
         _sr_data = yaml.safe_load(sr_file)
